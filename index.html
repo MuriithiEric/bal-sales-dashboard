@@ -259,6 +259,7 @@ input[type=file]{display:none;}
 <input type="file" id="fi-balsd" accept=".xlsx,.xls,.csv"/>
 <input type="file" id="fi-pending" accept=".xlsx,.xls,.csv"/>
 <input type="file" id="fi-top80" accept=".xlsx,.xls,.csv"/>
+<input type="file" id="fi-svt" accept=".xlsx,.xls,.csv"/>
 
 <!-- ══════════════════════════════ HOME ══════════════════════════════ -->
 <div id="home-screen">
@@ -339,6 +340,29 @@ input[type=file]{display:none;}
       </div>
     </div>
 
+    <!-- Sales vs Targets -->
+    <div class="module-card" id="card-svt" style="--module-color:#dc2626;" onclick="handleModuleClick('svt')">
+      <div class="mc-top">
+        <div class="mc-icon" style="background:#fef2f2;">🎯</div>
+        <div class="mc-status empty" id="status-svt"><div class="sdot"></div> No data loaded</div>
+      </div>
+      <div class="mc-body">
+        <div class="mc-title">Sales vs Targets</div>
+        <div class="mc-desc">MTD performance against monthly targets — CORE local, BIP local, export, regional BTG, daily pace tracking and achievement % per category.</div>
+      </div>
+      <div class="mc-meta">
+        <span class="mc-tag">MTD vs Target</span>
+        <span class="mc-tag">CORE / BIP</span>
+        <span class="mc-tag">Balance to Go</span>
+        <span class="mc-tag">Daily Pace</span>
+        <span class="mc-tag">Regional</span>
+      </div>
+      <div class="mc-footer">
+        <div class="mc-file-info" id="file-info-svt">Drop or browse an .xlsx file to activate</div>
+        <div class="mc-action" id="action-svt">Load file →</div>
+      </div>
+    </div>
+
     <!-- Placeholder slot -->
     <div class="module-card locked" style="--module-color:#9ca3af;">
       <div class="mc-top">
@@ -356,6 +380,195 @@ input[type=file]{display:none;}
       </div>
     </div>
 
+  </div>
+</div>
+
+<!-- ══════════════════ SALES VS TARGETS MODULE VIEW ══════════════════ -->
+<div class="module-view" id="view-svt">
+  <div class="tab-bar">
+    <div class="tab-item active" onclick="switchTab('svt','summary')">📊 Summary</div>
+    <div class="tab-item" onclick="switchTab('svt','core')">🔵 CORE Local</div>
+    <div class="tab-item" onclick="switchTab('svt','bip')">🟣 BIP Local</div>
+    <div class="tab-item" onclick="switchTab('svt','export')">✈️ Export</div>
+    <div class="tab-item" onclick="switchTab('svt','regional')">📍 Regional BTG</div>
+  </div>
+  <div class="filter-row">
+    <div class="filter-group"><label>View</label>
+      <select id="svt-f-view" onchange="applySvtFilters()">
+        <option value="">All</option>
+        <option value="core">CORE</option>
+        <option value="bip">BIP</option>
+      </select>
+    </div>
+    <div class="filter-group"><label>Status</label>
+      <select id="svt-f-status" onchange="applySvtFilters()">
+        <option value="">All Categories</option>
+        <option value="achieved">Achieved ✓</option>
+        <option value="on_track">On Track (≥80%)</option>
+        <option value="behind">Behind (<80%)</option>
+      </select>
+    </div>
+    <button class="reset-btn" onclick="resetSvtFilters()">✕ Reset</button>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="page active" id="svt-summary">
+    <div class="kpi-grid">
+      <div class="kpi-card"><div class="kpi-icon amber">🎯</div><div><div class="kpi-value amber" id="svt-kpi-target">—</div><div class="kpi-label">Total Target (MT)</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon green">📦</div><div><div class="kpi-value green" id="svt-kpi-mtd">—</div><div class="kpi-label">MTD Sales (MT)</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon blue">📈</div><div><div class="kpi-value blue" id="svt-kpi-pct">—</div><div class="kpi-label">Achievement %</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon red">📉</div><div><div class="kpi-value red" id="svt-kpi-btg">—</div><div class="kpi-label">Balance to Go (MT)</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon teal">✅</div><div><div class="kpi-value teal" id="svt-kpi-achieved">—</div><div class="kpi-label">Categories Achieved</div></div></div>
+      <div class="kpi-card"><div class="kpi-icon purple">⚡</div><div><div class="kpi-value purple" id="svt-kpi-pace">—</div><div class="kpi-label">Daily Avg vs Required</div></div></div>
+    </div>
+    <div class="insights-panel" style="background:#fef2f2;border:1px solid #fecaca;">
+      <div class="insights-title" style="color:#dc2626;">📊 March 2026 Snapshot</div>
+      <div class="insight-row" id="svt-insights"></div>
+    </div>
+    <div class="chart-grid wide">
+      <div class="chart-card">
+        <div class="chart-title">MTD Sales vs Target — All Categories</div>
+        <div class="chart-sub">Green bar = achieved · Red = behind · Sorted by achievement %</div>
+        <div class="chart-wrap" style="max-height:340px;"><canvas id="svt-ch-overview-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Achievement Distribution</div>
+        <div class="chart-sub">Categories by performance band</div>
+        <div class="chart-wrap"><canvas id="svt-ch-ach-donut"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-grid c2">
+      <div class="chart-card">
+        <div class="chart-title">CORE vs BIP — Target vs MTD</div>
+        <div class="chart-sub">Side-by-side total comparison</div>
+        <div class="chart-wrap"><canvas id="svt-ch-core-bip"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Balance to Go by Category</div>
+        <div class="chart-sub">How much remains — CORE + BIP combined</div>
+        <div class="chart-wrap"><canvas id="svt-ch-btg-summary"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CORE LOCAL -->
+  <div class="page" id="svt-core">
+    <p class="sec-label">Top 5 CORE categories by MTD volume</p>
+    <div class="ranked-row" id="svt-ranked-core"></div>
+    <div class="chart-grid wide">
+      <div class="chart-card">
+        <div class="chart-title">CORE Local — Achievement % per Category</div>
+        <div class="chart-sub">≥100% green · 80–99% amber · <80% red · Dashed line = 100% target</div>
+        <div class="chart-wrap" style="max-height:360px;"><canvas id="svt-ch-core-ach"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Daily Pace: Avg vs Required</div>
+        <div class="chart-sub">Is the current daily rate enough to close the gap?</div>
+        <div class="chart-wrap"><canvas id="svt-ch-core-pace"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><div class="chart-title">CORE Local — Category Detail</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Target (MT)</th><th>MTD Sales (MT)</th><th>Achievement %</th><th>Daily Target</th><th>Daily Avg</th><th>BTG (MT)</th><th>Status</th></tr></thead>
+          <tbody id="svt-core-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- BIP LOCAL -->
+  <div class="page" id="svt-bip">
+    <p class="sec-label">Top 5 BIP categories by MTD volume</p>
+    <div class="ranked-row" id="svt-ranked-bip"></div>
+    <div class="chart-grid wide">
+      <div class="chart-card">
+        <div class="chart-title">BIP Local — Achievement % per Category</div>
+        <div class="chart-sub">≥100% green · 80–99% amber · <80% red</div>
+        <div class="chart-wrap" style="max-height:360px;"><canvas id="svt-ch-bip-ach"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Daily Pace: Avg vs Required</div>
+        <div class="chart-sub">Current run rate vs daily target needed</div>
+        <div class="chart-wrap"><canvas id="svt-ch-bip-pace"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><div class="chart-title">BIP Local — Category Detail</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Target (MT)</th><th>MTD Sales (MT)</th><th>Achievement %</th><th>Daily Target</th><th>Daily Avg</th><th>BTG (MT)</th><th>Status</th></tr></thead>
+          <tbody id="svt-bip-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- EXPORT -->
+  <div class="page" id="svt-export">
+    <p class="sec-label">Export CORE performance</p>
+    <div class="ranked-row" id="svt-ranked-export"></div>
+    <div class="chart-grid c2">
+      <div class="chart-card">
+        <div class="chart-title">Export CORE — Target vs MTD Sales</div>
+        <div class="chart-sub">Side by side per category</div>
+        <div class="chart-wrap"><canvas id="svt-ch-export-bar"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Export Achievement %</div>
+        <div class="chart-sub">% of target achieved per category</div>
+        <div class="chart-wrap"><canvas id="svt-ch-export-ach"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><div class="chart-title">Export CORE — Category Detail</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Category</th><th>Target (MT)</th><th>MTD Sales (MT)</th><th>Achievement %</th><th>Daily Target</th><th>Daily Avg</th><th>BTG (MT)</th><th>Status</th></tr></thead>
+          <tbody id="svt-export-table"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- REGIONAL BTG -->
+  <div class="page" id="svt-regional">
+    <p class="sec-label">Regions</p>
+    <div class="ranked-row" id="svt-ranked-regions"></div>
+    <div class="chart-grid c2">
+      <div class="chart-card">
+        <div class="chart-title">Regional Achievement % vs Target</div>
+        <div class="chart-sub">MTD vs regional target for March</div>
+        <div class="chart-wrap"><canvas id="svt-ch-reg-ach"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Balance to Go by Region</div>
+        <div class="chart-sub">Remaining MT per region</div>
+        <div class="chart-wrap"><canvas id="svt-ch-reg-btg"></canvas></div>
+      </div>
+    </div>
+    <div class="chart-grid c2">
+      <div class="chart-card">
+        <div class="chart-title">Region × Category Achievement</div>
+        <div class="chart-sub">March MTD vs March target (stacked)</div>
+        <div class="chart-wrap"><canvas id="svt-ch-reg-cat"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Regional Target vs Actual — Top Categories</div>
+        <div class="chart-sub">Per-region top category performance</div>
+        <div class="chart-wrap"><canvas id="svt-ch-reg-top-cat"></canvas></div>
+      </div>
+    </div>
+    <div class="table-card">
+      <div class="table-header"><div class="chart-title">Region × Category — March Targets</div></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Region</th><th>Category</th><th>Jan Target</th><th>Feb Target</th><th>Mar Target</th><th>YTD Target</th></tr></thead>
+          <tbody id="svt-reg-table"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -826,7 +1039,7 @@ function switchTab(module, tabName){
 //  MODULE CARD CLICK HANDLING
 // ══════════════════════════════════════════════════════
 function handleModuleClick(name){
-  const dataMap={balsd:balsdData,pending:pendingData,top80:top80Data};
+  const dataMap={balsd:balsdData,pending:pendingData,top80:top80Data,svt:svtCoreLocal};
   const data=dataMap[name]||[];
   if(data.length>0){
     openModule(name);
@@ -839,9 +1052,10 @@ function handleModuleClick(name){
 document.getElementById('fi-balsd').addEventListener('change',e=>{if(e.target.files[0])loadFile('balsd',e.target.files[0]);});
 document.getElementById('fi-pending').addEventListener('change',e=>{if(e.target.files[0])loadFile('pending',e.target.files[0]);});
 document.getElementById('fi-top80').addEventListener('change',e=>{if(e.target.files[0])loadFile('top80',e.target.files[0]);});
+document.getElementById('fi-svt').addEventListener('change',e=>{if(e.target.files[0])loadFile('svt',e.target.files[0]);});
 
 // Drag & drop on home screen cards
-['balsd','pending','top80'].forEach(name=>{
+['balsd','pending','top80','svt'].forEach(name=>{
   const card=document.getElementById('card-'+name);
   if(!card)return;
   card.addEventListener('dragover',e=>{e.preventDefault();card.style.borderColor='var(--accent)';});
@@ -900,6 +1114,12 @@ function loadFile(module, file){
         buildTop80Summary();
         markLoaded('top80',file.name,top80Data.length);
         openModule('top80');
+      } else if(module==='svt'){
+        parseSvtWorkbook(wb);
+        applySvtFilters();
+        buildSvtSummary();
+        markLoaded('svt',file.name,svtCoreLocal.length+svtBipLocal.length);
+        openModule('svt');
       }
       updateChatSugs();
     }catch(err){alert('Error reading file: '+err.message);}
@@ -1165,11 +1385,13 @@ function updateChatSugs(){
   if(balsdData.length)loaded.push('BAL SD');
   if(pendingData.length)loaded.push('Pending Orders');
   if(top80Data.length)loaded.push('Top 80% Customers');
+  if(svtCoreLocal.length)loaded.push('Sales vs Targets');
   ctx.textContent=loaded.length?`Context: ${loaded.join(' + ')}`:'No data loaded yet';
   let chips=[];
   if(balsdData.length){chips.push('Top brands by MT?','Best sales office?','Fighter vs Focus split?');}
   if(pendingData.length){chips.push('Top shortage SKUs?','Which customer has most pending?');}
   if(top80Data.length){chips.push('Which region is most concentrated?','Top customer overall?','How many customers = 80% in each region?');}
+  if(svtCoreLocal.length){chips.push('Which CORE category is most behind target?','What is total BTG?','Which categories have achieved target?');}
   if(!chips.length)chips=['Load a data file to start asking questions'];
   sugs.innerHTML=chips.map(c=>`<div class="sug" onclick="askSug(this)">${c}</div>`).join('');
 }
@@ -1180,7 +1402,7 @@ async function sendMsg(){
   if(!balsdData.length&&!pendingData.length){addMsg('ai','⚠️ Load at least one data file first.');return;}
   input.value='';document.getElementById('send-btn').disabled=true;
   addMsg('user',q);addTyping();chatHistory.push({role:'user',content:q});
-  const ctx=[balsdData.length?balsdSummary:'',pendingData.length?pendingSummary:'',top80Data.length?top80Summary:''].filter(Boolean).join('\n\n');
+  const ctx=[balsdData.length?balsdSummary:'',pendingData.length?pendingSummary:'',top80Data.length?top80Summary:'',svtCoreLocal.length?svtSummary:''].filter(Boolean).join('\n\n');
   const sys=`You are a business analyst for Bidco Africa Limited, a large FMCG company in Kenya. You have access to the following data:\n\n${ctx}\n\nAnswer concisely. Bold key numbers. Max 200 words unless a breakdown is needed. Never invent numbers not in the data.`;
   try{
     let res;
@@ -1374,6 +1596,368 @@ function buildTop80Summary(){
   const regions=[...new Set(d.map(c=>c.region).filter(Boolean))];
   const sorted=[...d].sort((a,b)=>b.mt-a.mt);
   top80Summary=`Top 80% Customers | Count:${d.length} | Total MT:${total.toFixed(2)} | Regions:${regions.join(', ')}\nTop 5: ${sorted.slice(0,5).map(c=>`${c.customer}(${c.region}):${c.mt.toFixed(1)}`).join(' | ')}\nRegional detail available for: ${Object.keys(top80ByRegion).join(', ')}`;
+}
+
+// ══════════════════════════════════════════════════════
+//  SALES VS TARGETS — DATA & LOGIC
+// ══════════════════════════════════════════════════════
+let svtCoreLocal=[], svtBipLocal=[], svtExportCore=[], svtRegionalTargets=[], svtSummary='';
+
+function parseSvtSheet(wb, sheetName){
+  // Reads the RIGHT-SIDE table (cols F-L, 0-indexed 5-11)
+  // Row 0: title, Row 1: headers, Rows 2+: data
+  const ws = wb.Sheets[sheetName];
+  if(!ws) return [];
+  const raw = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  const results = [];
+  for(let i=2; i<raw.length; i++){
+    const r = raw[i];
+    if(!r || !r[5] || r[5]==='Category' || r[5]==='Total' || typeof r[5]!=='string') continue;
+    const cat = r[5].trim();
+    if(!cat) continue;
+    const target = parseFloat(r[6]) || 0;
+    const dailyTarget = parseFloat(r[7]) || 0;
+    const mtdSales = parseFloat(r[8]) || 0;
+    const dailyAvg = parseFloat(r[9]) || 0;
+    const achRaw = r[10];
+    const achPct = (typeof achRaw === 'number') ? achRaw * 100 : (mtdSales > 0 && target > 0 ? mtdSales/target*100 : 0);
+    const btgRaw = r[11];
+    const btg = (btgRaw === 'Achieved' || btgRaw === 'achieved') ? 0 : (parseFloat(btgRaw) || Math.max(0, target - mtdSales));
+    const achieved = btgRaw === 'Achieved' || achPct >= 100;
+    results.push({cat, target, dailyTarget, mtdSales, dailyAvg, achPct, btg, achieved});
+  }
+  return results;
+}
+
+function parseRegionalTargets(wb){
+  const ws = wb.Sheets['Regional Targets'];
+  if(!ws) return [];
+  const raw = XLSX.utils.sheet_to_json(ws,{header:1,defval:null});
+  const results = [];
+  // Row 0 is header: Region, New Char Z1, Jan, Feb, Mar, Apr...
+  for(let i=1; i<raw.length; i++){
+    const r = raw[i];
+    if(!r || !r[0] || !r[1]) continue;
+    const region = String(r[0]).trim();
+    const cat = String(r[1]).trim();
+    if(!region || !cat) continue;
+    results.push({
+      region, cat,
+      jan: parseFloat(r[2]) || 0,
+      feb: parseFloat(r[3]) || 0,
+      mar: parseFloat(r[4]) || 0,
+      apr: parseFloat(r[5]) || 0,
+    });
+  }
+  return results;
+}
+
+function parseSvtWorkbook(wb){
+  svtCoreLocal = parseSvtSheet(wb, 'Local Sales in MT (CORE)');
+  svtBipLocal = parseSvtSheet(wb, 'Local Sales in MT (BIP)');
+  svtExportCore = parseSvtSheet(wb, 'Export Sales in MT (CORE)');
+  svtRegionalTargets = parseRegionalTargets(wb);
+}
+
+function getSvtFiltered(data){
+  const status = document.getElementById('svt-f-status')?.value || '';
+  if(!status) return data;
+  return data.filter(r => {
+    if(status === 'achieved') return r.achieved;
+    if(status === 'on_track') return !r.achieved && r.achPct >= 80;
+    if(status === 'behind') return r.achPct < 80;
+    return true;
+  });
+}
+function resetSvtFilters(){
+  ['svt-f-view','svt-f-status'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  applySvtFilters();
+}
+
+function applySvtFilters(){
+  if(!svtCoreLocal.length && !svtBipLocal.length) return;
+  const combined = [...svtCoreLocal, ...svtBipLocal];
+  const totalTarget = combined.reduce((s,r)=>s+r.target,0);
+  const totalMTD = combined.reduce((s,r)=>s+r.mtdSales,0);
+  const totalBTG = combined.reduce((s,r)=>s+r.btg,0);
+  const achPct = totalTarget > 0 ? (totalMTD/totalTarget*100) : 0;
+  const achievedCount = combined.filter(r=>r.achieved).length;
+  const coreTarget = svtCoreLocal.reduce((s,r)=>s+r.target,0);
+  const coreMTD = svtCoreLocal.reduce((s,r)=>s+r.mtdSales,0);
+  const bipTarget = svtBipLocal.reduce((s,r)=>s+r.target,0);
+  const bipMTD = svtBipLocal.reduce((s,r)=>s+r.mtdSales,0);
+  const totalDailyTarget = combined.reduce((s,r)=>s+r.dailyTarget,0);
+  const totalDailyAvg = combined.reduce((s,r)=>s+r.dailyAvg,0);
+
+  // KPIs
+  document.getElementById('svt-kpi-target').textContent = fmt(totalTarget)+' MT';
+  document.getElementById('svt-kpi-mtd').textContent = fmt(totalMTD)+' MT';
+  document.getElementById('svt-kpi-pct').textContent = achPct.toFixed(1)+'%';
+  document.getElementById('svt-kpi-btg').textContent = fmt(totalBTG)+' MT';
+  document.getElementById('svt-kpi-achieved').textContent = `${achievedCount}/${combined.length}`;
+  document.getElementById('svt-kpi-pace').textContent = totalDailyTarget>0 ? (totalDailyAvg/totalDailyTarget*100).toFixed(0)+'%' : '—';
+
+  // Insights
+  const coreAch = coreTarget > 0 ? (coreMTD/coreTarget*100).toFixed(1) : 0;
+  const bipAch = bipTarget > 0 ? (bipMTD/bipTarget*100).toFixed(1) : 0;
+  const exportTotal = svtExportCore.reduce((s,r)=>s+r.mtdSales,0);
+  const exportTarget = svtExportCore.reduce((s,r)=>s+r.target,0);
+  const behind = combined.filter(r=>r.achPct<80).length;
+  document.getElementById('svt-insights').innerHTML = `
+    <div class="insight-item"><div class="il">CORE achievement</div><div class="iv">${coreAch}%</div></div>
+    <div class="insight-item"><div class="il">BIP achievement</div><div class="iv">${bipAch}%</div></div>
+    <div class="insight-item"><div class="il">Export MTD</div><div class="iv">${exportTotal.toFixed(1)} MT</div></div>
+    <div class="insight-item"><div class="il">Export target</div><div class="iv">${exportTarget.toFixed(1)} MT</div></div>
+    <div class="insight-item"><div class="il">Categories behind</div><div class="iv">${behind}</div></div>
+    <div class="insight-item"><div class="il">Daily pace vs target</div><div class="iv">${totalDailyTarget>0?(totalDailyAvg/totalDailyTarget*100).toFixed(0)+'%':'—'}</div></div>`;
+
+  svtRenderOverviewBar(combined);
+  svtRenderAchDonut(combined);
+  svtRenderCoreBip(coreTarget, coreMTD, bipTarget, bipMTD);
+  svtRenderBtgSummary(combined);
+
+  // CORE tab
+  const coreFiltered = getSvtFiltered(svtCoreLocal);
+  renderRanked('svt-ranked-core', [...svtCoreLocal].sort((a,b)=>b.mtdSales-a.mtdSales).slice(0,5).map(r=>[r.cat, r.mtdSales]));
+  svtRenderAchBar('svt-ch-core-ach', coreFiltered);
+  svtRenderPace('svt-ch-core-pace', coreFiltered);
+  svtRenderTable('svt-core-table', coreFiltered);
+
+  // BIP tab
+  const bipFiltered = getSvtFiltered(svtBipLocal);
+  renderRanked('svt-ranked-bip', [...svtBipLocal].sort((a,b)=>b.mtdSales-a.mtdSales).slice(0,5).map(r=>[r.cat, r.mtdSales]));
+  svtRenderAchBar('svt-ch-bip-ach', bipFiltered);
+  svtRenderPace('svt-ch-bip-pace', bipFiltered);
+  svtRenderTable('svt-bip-table', bipFiltered);
+
+  // Export tab
+  renderRanked('svt-ranked-export', [...svtExportCore].sort((a,b)=>b.mtdSales-a.mtdSales).slice(0,5).map(r=>[r.cat, r.mtdSales]));
+  svtRenderExportBar();
+  svtRenderExportAch();
+  svtRenderTable('svt-export-table', svtExportCore);
+
+  // Regional tab
+  svtRenderRegional();
+}
+
+function svtAchColor(pct){
+  if(pct >= 100) return '#059669';
+  if(pct >= 80)  return '#d97706';
+  return '#dc2626';
+}
+
+function svtRenderOverviewBar(data){
+  // Sort by achievement %, show target vs MTD
+  const sorted = [...data].sort((a,b)=>b.achPct-a.achPct);
+  const top = sorted.slice(0,20);
+  mk('svt-ch-overview-bar',{
+    type:'bar',
+    data:{labels:top.map(r=>r.cat),datasets:[
+      {label:'Target',data:top.map(r=>r.target),backgroundColor:'#e5e7eb',borderRadius:3},
+      {label:'MTD Sales',data:top.map(r=>r.mtdSales),backgroundColor:top.map(r=>svtAchColor(r.achPct)),borderRadius:3}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:45}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+}
+
+function svtRenderAchDonut(data){
+  const achieved = data.filter(r=>r.achieved).length;
+  const onTrack = data.filter(r=>!r.achieved && r.achPct>=80).length;
+  const behind = data.filter(r=>r.achPct<80).length;
+  mk('svt-ch-ach-donut',{
+    type:'doughnut',
+    data:{labels:['Achieved ✓','On Track (≥80%)','Behind (<80%)'],
+    datasets:[{data:[achieved,onTrack,behind],backgroundColor:['#059669','#d97706','#dc2626'],borderWidth:2,borderColor:'#fff',hoverOffset:6}]},
+    options:{responsive:true,cutout:'58%',plugins:{legend:{position:'bottom',labels:{...LEG.labels}}}}
+  });
+}
+
+function svtRenderCoreBip(ct,cm,bt,bm){
+  mk('svt-ch-core-bip',{
+    type:'bar',
+    data:{labels:['CORE Local','BIP Local'],
+    datasets:[
+      {label:'Target',data:[ct,bt],backgroundColor:'#e5e7eb',borderRadius:5},
+      {label:'MTD Sales',data:[cm,bm],backgroundColor:['#2563eb','#7c3aed'],borderRadius:5}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX},y:{...AX,ticks:{...AX.ticks,callback:v=>fmt(v)}}}}
+  });
+}
+
+function svtRenderBtgSummary(data){
+  const withBtg = data.filter(r=>r.btg>0).sort((a,b)=>b.btg-a.btg).slice(0,12);
+  mk('svt-ch-btg-summary',{
+    type:'bar',
+    data:{labels:withBtg.map(r=>r.cat),
+    datasets:[{label:'BTG (MT)',data:withBtg.map(r=>r.btg),backgroundColor:withBtg.map(r=>svtAchColor(r.achPct)),borderRadius:5}]},
+    options:{indexAxis:'y',responsive:true,plugins:{legend:{display:false}},
+    scales:{x:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}},y:{...AX,ticks:{...AX.ticks,font:{family:'Inter',size:9}}}}}
+  });
+}
+
+function svtRenderAchBar(id, data){
+  const sorted = [...data].sort((a,b)=>b.achPct-a.achPct);
+  mk(id,{
+    type:'bar',
+    data:{labels:sorted.map(r=>r.cat),
+    datasets:[
+      {label:'Achievement %',data:sorted.map(r=>Math.min(r.achPct,150)),backgroundColor:sorted.map(r=>svtAchColor(r.achPct)),borderRadius:5},
+      {label:'Target (100%)',data:sorted.map(()=>100),type:'line',borderColor:'#6366f1',borderDash:[5,4],backgroundColor:'transparent',pointRadius:0}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:45}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)+'%'},max:150}}}
+  });
+}
+
+function svtRenderPace(id, data){
+  const withData = data.filter(r=>r.dailyTarget>0 && r.btg>0).sort((a,b)=>b.dailyTarget-a.dailyTarget).slice(0,12);
+  mk(id,{
+    type:'bar',
+    data:{labels:withData.map(r=>r.cat),
+    datasets:[
+      {label:'Daily Target',data:withData.map(r=>r.dailyTarget),backgroundColor:'#e5e7eb',borderRadius:3},
+      {label:'Daily Avg',data:withData.map(r=>r.dailyAvg),backgroundColor:withData.map(r=>r.dailyAvg>=r.dailyTarget?'#059669':'#dc2626'),borderRadius:3}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:45}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(1)}}}}
+  });
+}
+
+function svtRenderTable(tbodyId, data){
+  const el = document.getElementById(tbodyId);
+  if(!el) return;
+  const sorted = [...data].sort((a,b)=>a.achPct-b.achPct);
+  el.innerHTML = sorted.map(r=>{
+    const statusPill = r.achieved
+      ? '<span class="pill pill-green">✓ Achieved</span>'
+      : r.achPct >= 80
+        ? '<span class="pill pill-amber">On Track</span>'
+        : '<span class="pill pill-red">Behind</span>';
+    const achColor = r.achPct>=100?'color:var(--green)':r.achPct>=80?'color:var(--amber)':'color:var(--red)';
+    return `<tr>
+      <td><strong>${r.cat}</strong></td>
+      <td>${r.target.toFixed(1)}</td>
+      <td>${r.mtdSales.toFixed(1)}</td>
+      <td style="${achColor}"><strong>${r.achPct.toFixed(1)}%</strong></td>
+      <td>${r.dailyTarget.toFixed(2)}</td>
+      <td>${r.dailyAvg.toFixed(2)}</td>
+      <td>${r.btg > 0 ? r.btg.toFixed(1) : '—'}</td>
+      <td>${statusPill}</td>
+    </tr>`;
+  }).join('');
+}
+
+function svtRenderExportBar(){
+  const data = svtExportCore.filter(r=>r.target>0||r.mtdSales>0);
+  mk('svt-ch-export-bar',{
+    type:'bar',
+    data:{labels:data.map(r=>r.cat),datasets:[
+      {label:'Target',data:data.map(r=>r.target),backgroundColor:'#e5e7eb',borderRadius:4},
+      {label:'MTD Sales',data:data.map(r=>r.mtdSales),backgroundColor:data.map(r=>svtAchColor(r.achPct)),borderRadius:4}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+}
+
+function svtRenderExportAch(){
+  const data = svtExportCore.filter(r=>r.target>0).sort((a,b)=>b.achPct-a.achPct);
+  mk('svt-ch-export-ach',{
+    type:'bar',
+    data:{labels:data.map(r=>r.cat),
+    datasets:[{label:'Achievement %',data:data.map(r=>Math.min(r.achPct,200)),backgroundColor:data.map(r=>svtAchColor(r.achPct)),borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)+'%'}}}}
+  });
+}
+
+function svtRenderRegional(){
+  if(!svtRegionalTargets.length) return;
+  const regions = [...new Set(svtRegionalTargets.map(r=>r.region))];
+  // Sum March target per region
+  const regMar = {};
+  const regYTD = {};
+  svtRegionalTargets.forEach(r=>{
+    regMar[r.region] = (regMar[r.region]||0) + r.mar;
+    regYTD[r.region] = (regYTD[r.region]||0) + r.jan + r.feb + r.mar;
+  });
+  const regMarE = Object.entries(regMar).sort((a,b)=>b[1]-a[1]);
+  renderRanked('svt-ranked-regions', regMarE.map(([k,v])=>[k,v]));
+
+  // Regional achievement: use regional BTG right-side data for MTD (we don't have actual regional MTD split, use targets as proxy)
+  mk('svt-ch-reg-ach',{
+    type:'bar',
+    data:{labels:regMarE.map(x=>x[0]),
+    datasets:[{label:'March Target (MT)',data:regMarE.map(x=>x[1]),backgroundColor:COLORS,borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+
+  // YTD vs March split
+  mk('svt-ch-reg-btg',{
+    type:'bar',
+    data:{labels:regions,
+    datasets:[
+      {label:'Jan',data:regions.map(reg=>svtRegionalTargets.filter(r=>r.region===reg).reduce((s,r)=>s+r.jan,0)),backgroundColor:'#bfdbfe',borderRadius:3,stack:'s'},
+      {label:'Feb',data:regions.map(reg=>svtRegionalTargets.filter(r=>r.region===reg).reduce((s,r)=>s+r.feb,0)),backgroundColor:'#6366f1',borderRadius:3,stack:'s'},
+      {label:'Mar',data:regions.map(reg=>svtRegionalTargets.filter(r=>r.region===reg).reduce((s,r)=>s+r.mar,0)),backgroundColor:'#dc2626',borderRadius:3,stack:'s'}
+    ]},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+
+  // Top 6 categories × regions stacked
+  const topCats = Object.entries(
+    svtRegionalTargets.reduce((m,r)=>{m[r.cat]=(m[r.cat]||0)+r.mar;return m;},{}))
+    .sort((a,b)=>b[1]-a[1]).slice(0,6).map(x=>x[0]);
+  mk('svt-ch-reg-cat',{
+    type:'bar',
+    data:{labels:regions,
+    datasets:topCats.map((cat,i)=>({
+      label:cat,
+      data:regions.map(reg=>svtRegionalTargets.filter(r=>r.region===reg&&r.cat===cat).reduce((s,r)=>s+r.mar,0)),
+      backgroundColor:COLORS[i],borderRadius:3,stack:'s'
+    }))},
+    options:{responsive:true,plugins:{legend:{labels:{...LEG.labels}}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+
+  // Top cat per region
+  const topPerRegion = regions.map(reg=>{
+    const cats = svtRegionalTargets.filter(r=>r.region===reg);
+    const topCat = cats.sort((a,b)=>b.mar-a.mar)[0];
+    return topCat?{region:reg,cat:topCat.cat,mar:topCat.mar}:null;
+  }).filter(Boolean);
+  mk('svt-ch-reg-top-cat',{
+    type:'bar',
+    data:{labels:topPerRegion.map(r=>`${r.region}\n(${r.cat.slice(0,10)})`),
+    datasets:[{label:'Top Category March Target',data:topPerRegion.map(r=>r.mar),backgroundColor:COLORS,borderRadius:5}]},
+    options:{responsive:true,plugins:{legend:{display:false}},
+    scales:{x:{...AX,ticks:{...AX.ticks,maxRotation:35}},y:{...AX,ticks:{...AX.ticks,callback:v=>v.toFixed(0)}}}}
+  });
+
+  // Table: region × category March targets (top 40 rows)
+  const tableData = svtRegionalTargets.filter(r=>r.mar>0).sort((a,b)=>b.mar-a.mar).slice(0,40);
+  document.getElementById('svt-reg-table').innerHTML = tableData.map(r=>`
+    <tr><td><span class="pill pill-blue">${r.region}</span></td>
+    <td>${r.cat}</td>
+    <td>${r.jan.toFixed(1)}</td>
+    <td>${r.feb.toFixed(1)}</td>
+    <td><strong>${r.mar.toFixed(1)}</strong></td>
+    <td>${(r.jan+r.feb+r.mar).toFixed(1)}</td></tr>`).join('');
+}
+
+function buildSvtSummary(){
+  const combined = [...svtCoreLocal,...svtBipLocal];
+  const tgt = combined.reduce((s,r)=>s+r.target,0);
+  const mtd = combined.reduce((s,r)=>s+r.mtdSales,0);
+  const btg = combined.reduce((s,r)=>s+r.btg,0);
+  const ach = tgt>0?(mtd/tgt*100).toFixed(1):0;
+  const behind = combined.filter(r=>r.achPct<80).map(r=>`${r.cat}(${r.achPct.toFixed(0)}%)`).join(', ');
+  const achieved = combined.filter(r=>r.achieved).map(r=>r.cat).join(', ');
+  svtSummary = `Sales vs Targets March 2026 | Total Target:${tgt.toFixed(0)} MT | MTD Sales:${mtd.toFixed(0)} MT | Achievement:${ach}% | BTG:${btg.toFixed(0)} MT\nCORE Local: ${svtCoreLocal.length} categories | BIP Local: ${svtBipLocal.length} categories | Export CORE: ${svtExportCore.length} categories\nAchieved categories: ${achieved}\nBehind (<80%): ${behind}`;
 }
 
 document.getElementById('today-date').textContent=new Date().toLocaleDateString('en-GB',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
